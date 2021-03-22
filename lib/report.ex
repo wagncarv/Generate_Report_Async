@@ -1,6 +1,7 @@
 defmodule Report do
   alias Report.Parser
   @keys ["name", "hours", "day", "month", "year"]
+  @files ["part_1.csv", "part_2.csv", "part_3.csv"]
 
   def build(filename) do
     filename
@@ -8,8 +9,27 @@ defmodule Report do
     |> Enum.to_list()
   end
 
-  def full_report(filename \\ "gen_report.csv") do
-    values = build(filename)
+  def build_from_many(file_names) do
+    files = file_names
+    |> Enum.reduce([], fn file, acc -> sum_values(acc, [file]) end)
+    |> Enum.reduce([], fn file, acc -> acc ++ file end)
+  end
+
+  def sum_values(acc, file) do
+    new_part = read_async(file)
+    List.insert_at(acc, 0, new_part)
+  end
+
+  def read_async(file_name) do
+    [result] =
+    file_name
+    |> Task.async_stream(&build/1)
+    |> Enum.map(fn {:ok, result} -> result end)
+    result
+  end
+
+  def full_report(files_list \\ @files) do
+    values = build_from_many(files_list)
     all = all_hours(values)
     map = group_data(values)
     keys = get_keys(map) # header_keys
